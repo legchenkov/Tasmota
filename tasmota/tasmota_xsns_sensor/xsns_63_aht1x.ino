@@ -61,7 +61,7 @@
 #define AHT1X_MEAS_DELAY     80 // over 75ms in datasheet
 
 #ifdef USE_AHT2x
-  #define AHTX_CMD     0xB1 // Cmd for AHT2x
+  #define AHTX_CMD     0xBE // Cmd for AHT2x
   const char ahtTypes[] PROGMEM = "AHT2X|AHT2X";
 #else
   #define AHTX_CMD     0xE1 // Cmd for AHT1x
@@ -71,7 +71,7 @@
 uint8_t AHTSetCalCmd[3]    = { AHTX_CMD, 0x08, 0x00 }; // load factory calibration coeff
 uint8_t AHTSetCycleCmd[3]  = { AHTX_CMD, 0x28, 0x00 }; // enable cycle mode
 uint8_t AHTMeasureCmd[3]   = { 0xAC, 0x33, 0x00 };     // start measurment command
-uint8_t AHTResetCmd        =   0xBA;                   // soft reset command
+uint8_t AHTResetCmd        =   0xB0;                   // soft reset command
 
 struct {
   bool write_ok = false;
@@ -92,6 +92,7 @@ bool AHT1XWrite(uint8_t aht1x_idx) {
   Wire.write(AHTMeasureCmd, 3);
   if (Wire.endTransmission() != 0)
     return false;
+  delay(AHT1X_MEAS_DELAY);
   return true;
 }
 
