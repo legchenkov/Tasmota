@@ -77,9 +77,13 @@ void CounterIsrArg(void *arg) {
       // restart PWM each second (german 50Hz has to up to 0.01% deviation)
       // restart initiated by setting Counter.startReSync = true;
 #ifdef USE_AC_ZERO_CROSS_DIMMER
-      if (index == 3) ACDimmerZeroCross(time);
-#endif //USE_AC_ZERO_CROSS_DIMMER
+      if (index == 3) { ACDimmerZeroCross(time); }
       return;
+#else
+      if (!Settings->flag6.counter_both_edges) {  // SetOption159 - (Counter) Enable counting on both rising and falling edge (1)
+        return;
+      }
+#endif //USE_AC_ZERO_CROSS_DIMMER
     }
   }
 
@@ -233,7 +237,7 @@ void CounterShow(bool json)
         }
 #ifdef USE_WEBSERVER
       } else {
-        WSContentSend_PD(PSTR("{s}" D_COUNTER "%d{m}%s%s{e}"),
+        WSContentSend_PD(PSTR("{s}" D_COUNTER " %d{m}%s%s{e}"),
           i +1, counter, (bitRead(Settings->pulse_counter_type, i)) ? " " D_UNIT_SECOND : "");
 #endif  // USE_WEBSERVER
       }

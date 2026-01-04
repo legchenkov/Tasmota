@@ -1,35 +1,36 @@
 # Written by Maximilian Gerhardt <maximilian.gerhardt@rub.de>
 # 29th December 2020
+# and Christian Baars, Johann Obermeier
+# 2023 - 2025
 # License: Apache
 # Expanded from functionality provided by PlatformIO's espressif32 and espressif8266 platforms, credited below.
-# This script provides functions to download the filesystem (SPIFFS or LittleFS) from a running ESP32 / ESP8266
-# over the serial bootloader using esptool.py, and mklittlefs / mkspiffs for extracting.
+# This script provides functions to download the filesystem (LittleFS) from a running ESP32 / ESP8266
+# over the serial bootloader using esptool.py, and littlefs-python for extracting.
 # run by either using the VSCode task "Custom" -> "Download Filesystem"
 # or by doing 'pio run -t downloadfs' (with optional '-e <environment>') from the commandline.
 # output will be saved, by default, in the "unpacked_fs" of the project.
 # this folder can be changed by writing 'custom_unpack_dir = some_other_dir' in the corresponding platformio.ini
 # environment.
 import re
-import sys
 from os.path import isfile, join
 from enum import Enum
 import os
 import tasmotapiolib
 import subprocess
 import shutil
+import json
+from pathlib import Path
+from colorama import Fore, Back, Style
+from littlefs import LittleFS
+from platformio.compat import IS_WINDOWS
+from platformio.project.config import ProjectConfig
 
 Import("env")
-platform = env.PioPlatform()
+platform = env["PIOPLATFORM"]
 board = env.BoardConfig()
-mcu = board.get("build.mcu", "esp32")
-# Hack for using mklittlefs instead of mkspiffs -> needed since littlefs is not supported with this for ESP32
-if env["PIOPLATFORM"] == "espressif32":
-    #print("Replace MKSPIFFSTOOL with mklittlefs")
-    env.Replace( MKSPIFFSTOOL=platform.get_package_dir("tool-mklittlefs") + '/mklittlefs' )
-
+mcu = board.get("build.mcu", "esp32").lower()
 
 class FSType(Enum):
-    SPIFFS="spiffs"
     LITTLEFS="littlefs"
     FATFS="fatfs"
 
@@ -42,42 +43,12 @@ class FSInfo:
         self.block_size = block_size
     def __repr__(self):
         return f"FS type {self.fs_type} Start {hex(self.start)} Len {self.length} Page size {self.page_size} Block size {self.block_size}"
-    # extract command supposed to be implemented by subclasses
-    def get_extract_cmd(self, input_file, output_dir):
-        raise NotImplementedError()
 
-class LittleFSInfo(FSInfo):
+class FS_Info(FSInfo):
     def __init__(self, start, length, page_size, block_size):
-        if env["PIOPLATFORM"] == "espressif32":
-            #for ESP32: retrieve and evaluate, e.g. to mkspiffs_espressif32_arduino
-            self.tool = env.subst(env["MKSPIFFSTOOL"])
-        else:
-            self.tool = env["MKFSTOOL"] # from mkspiffs package
-        self.tool = join(platform.get_package_dir("tool-mklittlefs"), self.tool)
         super().__init__(FSType.LITTLEFS, start, length, page_size, block_size)
     def __repr__(self):
-        return f"FS type {self.fs_type} Start {hex(self.start)} Len {self.length} Page size {self.page_size} Block size {self.block_size} Tool: {self.tool}"
-    def get_extract_cmd(self, input_file, output_dir):
-        return [self.tool, "-b", str(self.block_size), "-p", str(self.page_size), "--unpack", output_dir, input_file]
-
-
-class SPIFFSInfo(FSInfo):
-    def __init__(self, start, length, page_size, block_size):
-        if env["PIOPLATFORM"] == "espressif32":
-            #for ESP32: retrieve and evaluate, e.g. to mkspiffs_espressif32_arduino
-            self.tool = env.subst(env["MKSPIFFSTOOL"])
-        else:
-            self.tool = env["MKFSTOOL"] # from mkspiffs package
-        self.tool = join(platform.get_package_dir("tool-mkspiffs"), self.tool)
-        super().__init__(FSType.SPIFFS, start, length, page_size, block_size)
-    def __repr__(self):
-        return f"FS type {self.fs_type} Start {hex(self.start)} Len {self.length} Page size {self.page_size} Block size {self.block_size} Tool: {self.tool}"
-    def get_extract_cmd(self, input_file, output_dir):
-        return f'"{self.tool}" -b {self.block_size} -p {self.page_size} --unpack "{output_dir}" "{input_file}"'
-
-# SPIFFS helpers copied from ESP32, https://github.com/platformio/platform-espressif32/blob/develop/builder/main.py
-# Copyright 2014-present PlatformIO <contact@platformio.org>
-# Licensed under the Apache License, Version 2.0 (the "License");
+        return f"{self.fs_type} Start {hex(self.start)} Len {hex(self.length)} Page size {hex(self.page_size)} Block size {hex(self.block_size)}"
 
 def _parse_size(value):
     if isinstance(value, int):
@@ -91,16 +62,9 @@ def _parse_size(value):
         return int(value[:-1]) * base
     return value
 
-## FS helpers for ESP8266
-# copied from https://github.com/platformio/platform-espressif8266/blob/develop/builder/main.py
-# Copyright 2014-present PlatformIO <contact@platformio.org>
-# Licensed under the Apache License, Version 2.0 (the "License");
-
 def _parse_ld_sizes(ldscript_path):
     assert ldscript_path
     result = {}
-    # get flash size from board's manifest
-    result['flash_size'] = int(env.BoardConfig().get("upload.maximum_size", 0))
     # get flash size from LD script path
     match = re.search(r"\.flash\.(\d+[mk]).*\.ld", ldscript_path)
     if match:
@@ -154,58 +118,67 @@ def esp8266_fetch_fs_size(env):
 
         env[k] = _value
 
-def esp8266_get_esptoolpy_reset_flags(resetmethod):
-    # no dtr, no_sync
-    resets = ("no_reset_no_sync", "soft_reset")
-    if resetmethod == "nodemcu":
-        # dtr
-        resets = ("default_reset", "hard_reset")
-    elif resetmethod == "ck":
-        # no dtr
-        resets = ("no_reset", "soft_reset")
+def switch_off_ldf():
+    """
+    Configure `lib_ldf_mode = off` for pre-script execution.
+    to avoid the time consuming library dependency resolution
+    """
+    import sys
+    
+    # only do this if one of the optimized targets is requested
+    optimized_targets = ["reset_target", "downloadfs", "factory_flash", "metrics-only"]
 
-    return ["--before", resets[0], "--after", resets[1]]
+    argv_string = " ".join(sys.argv)
+    is_optimized_targets = any(target in argv_string for target in optimized_targets)
+    
+    if is_optimized_targets:
+        # Project config modification
+        projectconfig = env.GetProjectConfig()
+        env_section = "env:" + env["PIOENV"]
+        if not projectconfig.has_section(env_section):
+            projectconfig.add_section(env_section)
+        projectconfig.set(env_section, "lib_ldf_mode", "off")
+
+switch_off_ldf()
 
 ## Script interface functions
 def parse_partition_table(content):
     entries = [e for e in content.split(b'\xaaP') if len(e) > 0]
-    print("Partition data:")
     for entry in entries:
         type = entry[1]
         if type in [0x82,0x83]: # SPIFFS or LITTLEFS
-            offset = int.from_bytes(entry[2:5], byteorder='little', signed=False)
-            size = int.from_bytes(entry[6:9], byteorder='little', signed=False)
-            print("type:",hex(type))
-            print("address:",hex(offset))
-            print("size:",hex(size))
-            env["SPIFFS_START"] = offset
-            env["SPIFFS_SIZE"] = size
-            env["SPIFFS_PAGE"] = int("0x100", 16)
-            env["SPIFFS_BLOCK"] = int("0x1000", 16)
+            offset = int.from_bytes(entry[2:6], byteorder='little', signed=False)
+            size = int.from_bytes(entry[6:10], byteorder='little', signed=False)
+            env["FS_START"] = offset
+            env["FS_SIZE"] = size
+            env["FS_PAGE"] = int("0x100", 16)
+            env["FS_BLOCK"] = int("0x1000", 16)
 
 def get_partition_table():
-    esptoolpy = join(platform.get_package_dir("tool-esptoolpy") or "", "esptool.py")
     upload_port = join(env.get("UPLOAD_PORT", "none"))
+    download_speed = join(str(board.get("download.speed", "115200")))
     if "none" in upload_port:
         env.AutodetectUploadPort()
         upload_port = join(env.get("UPLOAD_PORT", "none"))
-    fs_file = join(env["PROJECT_DIR"], "partition_table_from_flash.bin")
-    esptoolpy_flags = [
+        build_dir = env.subst("$BUILD_DIR")
+        if not os.path.exists(build_dir):
+            os.makedirs(build_dir)
+    fs_file = join(env.subst("$BUILD_DIR"), "partition_table_from_flash.bin")
+    esptool_flags = [
             "--chip", mcu,
             "--port", upload_port,
-            "--baud",  env.subst("$UPLOAD_SPEED"),
-            "--before", "default_reset",
-            "--after", "hard_reset",
-            "read_flash",
+            "--baud",  download_speed,
+            "--before", "default-reset",
+            "--after", "hard-reset",
+            "read-flash",
             "0x8000",
             "0x1000",
             fs_file
     ]
-    esptoolpy_cmd = [env["PYTHONEXE"], esptoolpy] + esptoolpy_flags
-    print("Executing flash download command to read partition table.")
-    print(esptoolpy_cmd)
+    ESPTOOL_EXE = env.get("ERASETOOL") if platform == "espressif8266" else env.get("OBJCOPY")
+    esptool_cmd = [ESPTOOL_EXE] + esptool_flags
     try:
-        returncode = subprocess.call(esptoolpy_cmd, shell=False)
+        returncode = subprocess.call(esptool_cmd, shell=False)
     except subprocess.CalledProcessError as exc:
         print("Downloading failed with " + str(exc))
     with open(fs_file, mode="rb") as file:
@@ -213,60 +186,53 @@ def get_partition_table():
         parse_partition_table(content)
 
 def get_fs_type_start_and_length():
-    platform = env["PIOPLATFORM"]
     if platform == "espressif32":
         print(f"Retrieving filesystem info for {mcu}.")
-        print("Partition file: " + str(env.subst("$PARTITIONS_TABLE_CSV")))
-        # esp32_fetch_spiffs_size(env)
         get_partition_table()
-        return SPIFFSInfo(env["SPIFFS_START"], env["SPIFFS_SIZE"], env["SPIFFS_PAGE"], env["SPIFFS_BLOCK"])
+        return FS_Info(env["FS_START"], env["FS_SIZE"], env["FS_PAGE"], env["FS_BLOCK"])
     elif platform == "espressif8266":
         print("Retrieving filesystem info for ESP8266.")
-        filesystem = board.get("build.filesystem", "spiffs")
-        if filesystem not in ("spiffs", "littlefs"):
+        filesystem = board.get("build.filesystem", "littlefs")
+        if filesystem not in ("littlefs"):
             print("Unrecognized board_build.filesystem option '" + str(filesystem) + "'.")
             env.Exit(1)
         # fetching sizes is the same for all filesystems
         esp8266_fetch_fs_size(env)
-        print("FS_START: " + hex(env["FS_START"]))
-        print("FS_END: " + hex(env["FS_END"]))
-        print("FS_PAGE: " + hex(env["FS_PAGE"]))
-        print("FS_BLOCK: " + hex(env["FS_BLOCK"]))
-        if filesystem == "spiffs":
-            print("Recognized SPIFFS filesystem.")
-            return SPIFFSInfo(env["FS_START"], env["FS_END"] - env["FS_START"], env["FS_PAGE"], env["FS_BLOCK"])
-        elif filesystem == "littlefs":
+        #print("FS_START: " + hex(env["FS_START"]))
+        #print("FS_SIZE: " + hex(env["FS_END"] - env["FS_START"]))
+        #print("FS_PAGE: " + hex(env["FS_PAGE"]))
+        #print("FS_BLOCK: " + hex(env["FS_BLOCK"]))
+        if filesystem == "littlefs":
             print("Recognized LittleFS filesystem.")
-            return LittleFSInfo(env["FS_START"], env["FS_END"] - env["FS_START"], env["FS_PAGE"], env["FS_BLOCK"])
+            return FS_Info(env["FS_START"], env["FS_END"] - env["FS_START"], env["FS_PAGE"], env["FS_BLOCK"])
         else:
             print("Unrecongized configuration.")
     pass
 
 def download_fs(fs_info: FSInfo):
     print(fs_info)
-    esptoolpy = join(platform.get_package_dir("tool-esptoolpy") or "", "esptool.py")
     upload_port = join(env.get("UPLOAD_PORT", "none"))
+    download_speed = join(str(board.get("download.speed", "115200")))
     if "none" in upload_port:
         env.AutodetectUploadPort()
         upload_port = join(env.get("UPLOAD_PORT", "none"))
     fs_file = join(env.subst("$BUILD_DIR"), f"downloaded_fs_{hex(fs_info.start)}_{hex(fs_info.length)}.bin")
-    esptoolpy_flags = [
+    esptool_flags = [
             "--chip", mcu,
             "--port", upload_port,
-            "--baud",  env.subst("$UPLOAD_SPEED"),
-            "--before", "default_reset",
-            "--after", "hard_reset",
-            "read_flash",
+            "--baud",  download_speed,
+            "--before", "default-reset",
+            "--after", "hard-reset",
+            "read-flash",
             hex(fs_info.start),
             hex(fs_info.length),
             fs_file
     ]
-    esptoolpy_cmd = [env["PYTHONEXE"], esptoolpy] + esptoolpy_flags
-    print("Executing flash download command.")
-    print(esptoolpy_cmd)
+    ESPTOOL_EXE = env.get("ERASETOOL") if platform == "espressif8266" else env.get("OBJCOPY")
+    esptool_cmd = [ESPTOOL_EXE] + esptool_flags
+    print("Download filesystem image")
     try:
-        returncode = subprocess.call(esptoolpy_cmd, shell=False)
-        # print("Launched download of filesystem binary.")
+        returncode = subprocess.call(esptool_cmd, shell=False)
         return (True, fs_file)
     except subprocess.CalledProcessError as exc:
         print("Downloading failed with " + str(exc))
@@ -276,9 +242,11 @@ def unpack_fs(fs_info: FSInfo, downloaded_file: str):
     # by writing custom_unpack_dir = some_dir in the platformio.ini, one can
     # control the unpack directory
     unpack_dir = env.GetProjectOption("custom_unpack_dir", "unpacked_fs")
-    #unpack_dir = "unpacked_fs"
+    current_build_dir = env.subst("$BUILD_DIR")
+    filename = f"downloaded_fs_{hex(fs_info.start)}_{hex(fs_info.length)}.bin"
+    downloaded_file = join(current_build_dir, filename)
     if not os.path.exists(downloaded_file):
-        print(f"ERROR: {downloaded_file} with filesystem not found, maybe download failed due to upload_speed setting being too high.")
+        print(f"ERROR: {downloaded_file} with filesystem not found, maybe download failed due to download_speed setting being too high.")
         assert(0)
     try:
         if os.path.exists(unpack_dir):
@@ -288,36 +256,76 @@ def unpack_fs(fs_info: FSInfo, downloaded_file: str):
     if not os.path.exists(unpack_dir):
         os.makedirs(unpack_dir)
 
-    cmd = fs_info.get_extract_cmd(downloaded_file, unpack_dir)
-    print("Executing extraction command: " + str(cmd))
+    print()
     try:
-        returncode = subprocess.call(cmd, shell=True)
-        print("Unpacked filesystem.")
+        # Read the downloaded filesystem image
+        with open(downloaded_file, 'rb') as f:
+            fs_data = f.read()
+        
+        # Calculate block count
+        block_count = fs_info.length // fs_info.block_size
+        
+        # Create LittleFS instance and mount the image
+        fs = LittleFS(
+            block_size=fs_info.block_size,
+            block_count=block_count,
+            mount=False
+        )
+        fs.context.buffer = bytearray(fs_data)
+        fs.mount()
+        
+        # Extract all files
+        unpack_path = Path(unpack_dir)
+        for root, dirs, files in fs.walk("/"):
+            if not root.endswith("/"):
+                root += "/"
+            # Create directories
+            for dir_name in dirs:
+                src_path = root + dir_name
+                dst_path = unpack_path / src_path[1:]  # Remove leading '/'
+                dst_path.mkdir(parents=True, exist_ok=True)
+            # Extract files
+            for file_name in files:
+                src_path = root + file_name
+                dst_path = unpack_path / src_path[1:]  # Remove leading '/'
+                dst_path.parent.mkdir(parents=True, exist_ok=True)
+                with fs.open(src_path, "rb") as src:
+                    dst_path.write_bytes(src.read())
+        
+        fs.unmount()
         return (True, unpack_dir)
-    except subprocess.CalledProcessError as exc:
-        print("Unpacking filesystem failed with " + str(exc))
+    except Exception as exc:
+        print("Unpacking filesystem with littlefs-python failed with " + str(exc))
         return (False, "")
 
 def display_fs(extracted_dir):
-    # extract command already nicely lists all extracted files.
-    # no need to display that ourselves. just display a summary
-    file_count = sum([len(files) for r, d, files in os.walk(extracted_dir)])
-    print("Extracted " + str(file_count) + " file(s) from filesystem.")
+    # List all extracted files
+    file_count = 0
+    print(Fore.GREEN + "Extracted files from filesystem image:")
+    print()
+    for root, dirs, files in os.walk(extracted_dir):
+        # Display directories
+        for dir_name in dirs:
+            dir_path = os.path.join(root, dir_name)
+            rel_path = os.path.relpath(dir_path, extracted_dir)
+            print(f"  [DIR]  {rel_path}/")
+        # Display files
+        for file_name in files:
+            file_path = os.path.join(root, file_name)
+            rel_path = os.path.relpath(file_path, extracted_dir)
+            file_size = os.path.getsize(file_path)
+            print(f"  [FILE] {rel_path} ({file_size} bytes)")
+            file_count += 1
+    print(f"\nExtracted {file_count} file(s) from filesystem.")
 
 def command_download_fs(*args, **kwargs):
-    print("Entrypoint")
-    #print(env.Dump())
-    get_partition_table()
     info = get_fs_type_start_and_length()
-    print("Parsed FS info: " + str(info))
     download_ok, downloaded_file = download_fs(info)
-    # print("Download was okay: " + str(download_ok) + ". File at: "+ str(downloaded_file)) # this is wrong
     unpack_ok, unpacked_dir = unpack_fs(info, downloaded_file)
     if unpack_ok is True:
         display_fs(unpacked_dir)
 
 def upload_factory(*args, **kwargs):
-    esptoolpy = join(platform.get_package_dir("tool-esptoolpy") or "", "esptool.py")
     upload_speed = join(str(board.get("upload.speed", "115200")))
     upload_port = join(env.get("UPLOAD_PORT", "none"))
     target_firm = join(env.subst("$PROJECT_DIR"),tasmotapiolib.get_final_bin_path(env).with_suffix(".bin" if mcu == "esp8266" else (".factory.bin")))
@@ -325,17 +333,90 @@ def upload_factory(*args, **kwargs):
         env.AutodetectUploadPort()
         upload_port = join(env.get("UPLOAD_PORT", "none"))
     if "tasmota" in target_firm:
-        esptoolpy_flags = [
+        esptool_flags = [
                 "--chip", mcu,
                 "--port", upload_port,
                 "--baud", env.subst("$UPLOAD_SPEED"),
-                "write_flash",
+                "write-flash",
                 "0x0",
                 target_firm
         ]
-        esptoolpy_cmd = [env["PYTHONEXE"], esptoolpy] + esptoolpy_flags
+        ESPTOOL_EXE = env.get("ERASETOOL") if platform == "espressif8266" else env.get("OBJCOPY")
+        esptool_cmd = [ESPTOOL_EXE] + esptool_flags
         print("Flash firmware at address 0x0")
-        subprocess.call(esptoolpy_cmd, shell=False)
+        subprocess.call(esptool_cmd, shell=False)
+
+def esp32_use_external_crashreport(*args, **kwargs):
+    try:
+        crash_report = env.GetProjectOption("custom_crash_report")
+    except:
+        print(Fore.RED + "Did not find custom_crash_report section in the current environment!!")
+        return
+    try:
+        crash_report = json.loads(crash_report)
+    except:
+        print(Fore.RED + "No valid JSON, please use output of STATUS 12 in the console!!")
+        return
+    print(Fore.GREEN + "Use external crash report (STATUS 12) for debugging:\n", json.dumps(crash_report, sort_keys=True, indent=4))
+    epc = crash_report['StatusSTK']['EPC']
+    callchain = crash_report['StatusSTK']['CallChain']
+    addr2line = ""
+    for p in platform.get_installed_packages():
+        if "toolchain" in p.path:
+            files = os.listdir(join(p.path,"bin"))
+            for f in files:
+                if "addr2line" in f:
+                    addr2line = join(p.path,"bin",f)
+    elf_file = join(env.subst("$BUILD_DIR"),env.subst("${PROGNAME}.elf"))
+    if isfile(elf_file) is False:
+        print(Fore.RED+"Did not find firmware.elf ... please build the current environment first!!")
+        return
+    enc = "mbcs" if IS_WINDOWS else "utf-8"
+    output = (
+    subprocess.check_output([addr2line,"-e",elf_file,"-fC","-a",epc])
+    .decode(enc)
+    .strip()
+    .splitlines()
+    )
+    print(Fore.YELLOW + "There is no way to check, if this data is valid for the given firmware!!")
+    print(Fore.GREEN + "Crash at:")
+    print(Fore.YELLOW + output[0] + ": \n" + output[1] + " in " + output[2])
+    print(Fore.GREEN + "Callchain:")
+    for call in callchain:
+        output = (
+        subprocess.check_output([addr2line,"-e",elf_file,"-fC","-a",call])
+        .decode(enc)
+        .strip()
+        .splitlines()
+        )
+        print(Fore.YELLOW + output[0]+": \n"+output[1]+" in "+output[2])
+
+def reset_target(*args, **kwargs):
+    upload_port = join(env.get("UPLOAD_PORT", "none"))
+    if "none" in upload_port:
+        env.AutodetectUploadPort()
+        upload_port = join(env.get("UPLOAD_PORT", "none"))
+    esptool_flags = [
+        "--no-stub",
+        "--chip", mcu,
+        "--port", upload_port,
+        "flash-id"
+    ]
+    ESPTOOL_EXE = env.get("ERASETOOL") if platform == "espressif8266" else env.get("OBJCOPY")
+    esptool_cmd = [ESPTOOL_EXE] + esptool_flags
+    print("Try to reset device")
+    subprocess.call(esptool_cmd, shell=False)
+
+# Custom Target Definitions
+env.AddCustomTarget(
+    name="reset_target",
+    dependencies=None,
+    actions=[
+        reset_target
+    ],
+    title="Reset connected device",
+    description="This command resets the connected device via esptool",
+)
 
 env.AddCustomTarget(
     name="downloadfs",
@@ -355,4 +436,14 @@ env.AddCustomTarget(
     ],
     title="Flash factory",
     description="Flash factory firmware"
+)
+
+env.AddCustomTarget(
+    name="external_crashreport",
+    dependencies=None,
+    actions=[
+        esp32_use_external_crashreport
+    ],
+    title="External crash report",
+    description="Use external crashreport from Tasmotas console output of STATUS 12"
 )

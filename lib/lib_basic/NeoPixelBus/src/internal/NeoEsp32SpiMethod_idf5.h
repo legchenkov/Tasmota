@@ -30,7 +30,7 @@ License along with NeoPixel.  If not, see
 
 #if defined(ARDUINO_ARCH_ESP32)
 
-#if (defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C2) || defined(CONFIG_IDF_TARGET_ESP32C6)) && !defined(HSPI_HOST)
+#if (defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C2) || defined(CONFIG_IDF_TARGET_ESP32C5) || defined(CONFIG_IDF_TARGET_ESP32C6)) && !defined(HSPI_HOST)
 // HSPI_HOST depreciated in C3
 #define HSPI_HOST   SPI2_HOST
 #endif
@@ -328,8 +328,9 @@ public:
 
         _spi_strip->bytes_per_pixel = bytes_per_pixel;
         _spi_strip->strip_len = _pixelCount;
-
-        AddLog(2,"SPI:initialized with error code: %u on pin: %u",ret, _pin);
+        // if (ret) {
+        //     AddLog(2,"SPI: initialized with error code: %u on pin: %u",ret, _pin);
+        // }
         return;
     err:
         if (_spi_strip) {
@@ -341,7 +342,9 @@ public:
             }
             free(_spi_strip);
         }
-        AddLog(2,"SPI-Error:initialized with error code: %u on pin: %u",ret, _pin);
+        // if (ret) {
+        //     AddLog(2,"SPI-Error:initialized with error code: %u on pin: %u",ret, _pin);
+        // }
         return;
     }
 

@@ -21,14 +21,6 @@
 
 #ifdef USE_BERRY
 
-
-#ifdef USE_WEBCLIENT
-
-// extern int be_udp_init(bvm *vm);
-// extern int be_udp_deinit(bvm *vm);
-// extern int be_udp_begin(bvm *vm);
-// extern int be_udp_begin_mcast(bvm *vm);
-
 #include <Arduino.h>
 #include <WiFiUdp.h>
 #include "be_mapping.h"
@@ -51,7 +43,11 @@ extern "C" {
 
   // udp.begin(interface:string, port:int) -> bool
   int32_t be_udp_begin_ntv(WiFiUDP *udp, const char *host, int32_t port) {
+#ifdef USE_IPV6
+    IPAddress addr(IPv6);
+#else
     IPAddress addr;
+#endif
     // if no host or host is "" then we defult to INADDR_ANY
     if(host && (*host != 0) && !WifiHostByName(host, addr)){
         return 0;
@@ -66,7 +62,11 @@ extern "C" {
 
   // udp.begin_multicast(address:string, port:int) -> nil
   int32_t be_udp_begin_mcast_ntv(WiFiUDP *udp, const char *host, int32_t port) {
+#ifdef USE_IPV6
+    IPAddress addr(IPv6);
+#else
     IPAddress addr;
+#endif
     if(!WifiHostByName(host, addr)){
         return 0;
     }
@@ -127,7 +127,7 @@ extern "C" {
 
       // set remotet ip
       IPAddress remote_ip = udp->remoteIP();
-      be_pushstring(vm, remote_ip.toString().c_str());
+      be_pushstring(vm, remote_ip.toString(true).c_str());
       be_setmember(vm, 1, "remote_ip");
       be_pop(vm, 1);
 
@@ -143,5 +143,4 @@ extern "C" {
   }
 }
 
-#endif // USE_WEBCLIENT
 #endif  // USE_BERRY
