@@ -41,6 +41,7 @@
 #define CFG_HOLDER        4617                   // [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
 // -- Project -------------------------------------
+#undef PROJECT
 #define PROJECT                "BLESCAN32"
 
 // -- Wifi ----------------------------------------
@@ -58,9 +59,8 @@
 #endif
 
 #ifdef MY_GW
-#undef WIFI_GATEWAY           
+#undef  WIFI_GATEWAY
 #define WIFI_GATEWAY           "192.168.32.1"
-#define WIFI_SUBNETMASK        "255.255.255.0"
 #endif
 
 #ifdef MY_DNS
@@ -79,140 +79,10 @@
 #define MQTT_PORT         1883                   // [MqttPort] MQTT port (10123 on CloudMQTT)
 #endif
 
-// -- Disable Features ----------------------------
-#undef I2CDRIVERS_1
-#undef I2CDRIVERS_2
-#undef I2CDRIVERS_3
-#undef I2CDRIVERS_4
-#undef I2CDRIVERS_5
-#undef I2CDRIVERS_6
-#undef I2CDRIVERS_8
-#undef I2CDRIVERS_9
-#undef I2CDRIVERS_10
-#undef I2CDRIVERS_11
-#undef I2CDRIVERS_12
-#undef I2CDRIVERS_13
-#undef I2CDRIVERS_14
-#undef I2CDRIVERS_15
-#undef I2CDRIVERS_16
-#undef I2CDRIVERS_17
-#undef I2CDRIVERS_18
-#undef I2CDRIVERS_19
-#undef I2CDRIVERS_20
-#undef I2CDRIVERS_21
-#undef I2CDRIVERS_22
-#undef I2CDRIVERS_23
-#undef I2CDRIVERS_24
-#undef I2CDRIVERS_25
-#undef I2CDRIVERS_26
-#undef I2CDRIVERS_27
-#undef I2CDRIVERS_28
-#undef I2CDRIVERS_29
-#undef I2CDRIVERS_30
-#undef I2CDRIVERS_31
-#undef I2CDRIVERS_32
-#undef I2CDRIVERS_33
-#undef I2CDRIVERS_34
-#undef I2CDRIVERS_35
-#undef I2CDRIVERS_36
-#undef I2CDRIVERS_37
-#undef I2CDRIVERS_38
-#undef I2CDRIVERS_39
-#undef I2CDRIVERS_40
-#undef I2CDRIVERS_41
-#undef I2CDRIVERS_42
-#undef I2CDRIVERS_44
-#undef I2CDRIVERS_45
-#undef I2CDRIVERS_46
-#undef I2CDRIVERS_47
-#undef I2CDRIVERS_48
-#undef I2CDRIVERS_49
-#undef I2CDRIVERS_50
-#undef I2CDRIVERS_51
-#undef I2CDRIVERS_52
-#undef I2CDRIVERS_53
-#undef I2CDRIVERS_54
-#undef I2CDRIVERS_55
-#undef I2CDRIVERS_56
-#undef I2CDRIVERS_57
-#undef I2CDRIVERS_58
-#undef I2CDRIVERS_59
-#undef I2CDRIVERS_60
-#undef I2CDRIVERS_61
-#undef I2CDRIVERS_62
-#undef I2CDRIVERS_63
-#undef I2CDRIVERS_64
-#undef I2CDRIVERS_65
-#undef USE_DS18x20
-#undef USE_DHT
-#undef USE_SHT
-#undef USE_HTU
-#undef USE_IR_REMOTE
-#undef USE_IR_RECEIVE
-#undef USE_RF433
-#undef USE_RC_SWITCH
-#undef USE_WS2812
-#undef USE_TUYA
-#undef USE_ARILUX_RF
-#undef USE_SR04
-#undef USE_TM1638
-#undef USE_HX711
-#undef USE_PZEM004T
-#undef USE_MHZ19
-#undef USE_SENSEAIR
-#undef USE_PMS5003
-#undef USE_MPU6050
-#undef USE_MCP230xx
-#undef USE_MPR121
-#undef USE_CCS811
-#undef USE_MHZ19_SERIAL
-#undef USE_SONOFF_SC
-#undef USE_SONOFF_RF
-#undef USE_SONOFF_L1
-#undef USE_DOMOTICZ
-#undef USE_HOME_ASSISTANT
-#undef USE_EMULATION
-#undef USE_EMULATION_HUE
-#undef USE_EMULATION_WEMO
-#undef USE_KNX
-#undef USE_ELECTRIQ
-#undef USE_TELEGRAM
-#undef USE_TIMERS_WEB
-#undef USE_SUNRISE
-#undef USE_DISCOVERY
-#undef USE_ADC
-#undef USE_SERIAL_BRIDGE
-#undef USE_MQTT_TLS
-#undef USE_MQTT_TLS_CA_CERT
-#undef USE_MQTT_TLS_FORCE_EC_CIPHER
-#undef USE_MQTT_AWS_IOT_LIGHT
-#undef USE_MQTT_OVER_WEBSOCKETS
-#undef USE_I2S_AUDIO_OUTPUT
-#undef USE_SPI
-#undef USE_DISPLAY
-#undef USE_DISPLAY_LCD
-#undef USE_DISPLAY_OLED
-#undef USE_DISPLAY_EPD
-#undef USE_DISPLAY_MATRIX
-#undef USE_DISPLAY_ILI9341
-#undef USE_DISPLAY_EPAPER_29
-#undef USE_DISPLAY_EPAPER_42
-#undef USE_DISPLAY_ILI9488
-#undef USE_DISPLAY_RA8876
-#undef USE_DISPLAY_SEVENSEG
-#undef USE_DISPLAY_SH1106
-#undef USE_DISPLAY_SSD1351
-#undef USE_DISPLAY_SSD1351_SPI
-#undef USE_DISPLAY_ST7789
-#undef USE_DISPLAY_ST7789V
-#undef USE_DISPLAY_ST7789V2
-#undef USE_DISPLAY_SSD1331
-#undef USE_VEML6070
-
 // -- Features ------------------------------------
-#define USE_I2C
-#define USE_AHT2x
+#define USE_BH1750
 #define USE_BMP
+#define USE_ATH2x
 
 // -- ESP32 Bluetooth -----------------------------
 #define USE_ESP32
@@ -221,10 +91,10 @@
 
 // -- Rules ---------------------------------------
 #define USE_RULES
-  #define USER_RULE1 "ON System#Boot DO Backlog BLEAlias EE0CC55931EF=Valera DA6A321C2DFF=Anton D0622C929D93=Taya; BLEAddrFilter 0; TelePeriod 30; BLEMaxAge 60; so115 1; BLEMode2; BLEScan0 1; Sleep 50; RuleTimer1 30 endon"
-  #define USER_RULE2 "ON Rules#Timer=1 DO Backlog BLEDevices; RuleTimer2 30 endon"
-  #define USER_RULE3 "ON Rules#Timer=2 DO Backlog BLEDevices; RuleTimer1 30 endon"
-  
+  #define USER_RULE1 "ON System#Boot DO Backlog BLEAlias EE0CC55931EF=Valera DA6A321C2DFF=Anton D0622C929D93=Taya; AdcParam 6,0,4095,0,3300; BLEMode1; BLEScan0 0; BLEScan 9; RuleTimer1 10 endon"
+  #define USER_RULE2 "ON Rules#Timer=1 DO Backlog BLEDevices; Delay 5; BLEMode0; RuleTimer2 50 endon"
+  #define USER_RULE3 "ON Rules#Timer=2 DO Backlog BLEMode1; BLEScan 9; RuleTimer1 10 endon"
+
 // -- Voltage Monitoring --------------------------
 //#define USE_ADC
 //#define USE_ESP32_SENSORS
@@ -242,6 +112,6 @@
 #define APP_SLEEP 50
 #endif
 
-#define USER_BACKLOG "Timezone 99; TimeStd 0,0,10,1,3,60; TimeDst 0,0,3,1,2,120; FriendlyName1 Kinderroom; DeviceName Kinderroom; Hostname Kinderroom; MqttHost 192.168.32.39; Topic Kinderroom; BLEAddrFilter 0; BLEMaxAge 60; so24 1; Rule1 1; Rule2 1; Rule3 1; GPIO18 608; GPIO17 640; GPIO22 256; I2CDriver12 0"
+#define USER_BACKLOG "Timezone 99; TimeStd 0,0,10,1,3,60; TimeDst 0,0,3,1,2,120; FriendlyName1 Bedroom; DeviceName Bedroom; Hostname Bedroom; MqttHost 192.168.32.39; Topic Bedroom; BLEAddrFilter 0; BLEMaxAge 60; so24 1; Rule1 1; Rule2 1; Rule3 1; GPIO4 640; GPIO17 608; GPIO22 256; GPIO36 4704"
 
 #endif  // _USER_CONFIG_OVERRIDE_H_
