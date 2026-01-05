@@ -149,9 +149,9 @@
 #undef USE_HTU
 #undef USE_IR_REMOTE
 #undef USE_IR_RECEIVE
+#undef USE_RF433
 #undef USE_RC_SWITCH
 #undef USE_WS2812
-#undef USE_RF433
 #undef USE_TUYA
 #undef USE_ARILUX_RF
 #undef USE_SR04
