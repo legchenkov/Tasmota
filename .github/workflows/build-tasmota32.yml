@@ -30,8 +30,8 @@ jobs:
         with:
           path: |
             ~/.platformio
-            tasmota/.pio
-          key: ${{ runner.os }}-pio-${{ hashFiles('tasmota/platformio.ini', 'tasmota/platformio_override.ini', 'tasmota/platformio_tasmota*.ini') }}
+            ./.pio
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini', 'platformio_override.ini', 'platformio_tasmota*.ini') }}
           restore-keys: |
             ${{ runner.os }}-pio-
 
@@ -40,27 +40,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -U platformio
 
+      - name: Show platformio.ini location (debug)
+        run: |
+          pwd
+          ls -lah
+          test -f platformio.ini && echo "OK: platformio.ini found in repo root"
+
       - name: Clean (optional)
         if: ${{ inputs.clean == 'true' }}
         run: |
-          platformio run -d tasmota -e "${{ inputs.env }}" -t clean
+          platformio run -e "${{ inputs.env }}" -t clean
 
       - name: Build
         run: |
           echo "Building env: ${{ inputs.env }}"
-          platformio run -d tasmota -e "${{ inputs.env }}"
+          platformio run -e "${{ inputs.env }}"
 
       - name: Collect firmware
         run: |
           mkdir -p artifacts
 
-          # Если Tasmota сформировала build_output
-          if [ -d "tasmota/build_output/firmware" ]; then
-            cp -v tasmota/build_output/firmware/* artifacts/ || true
+          # Часто итоговые бинарники лежат здесь
+          if [ -d "build_output/firmware" ]; then
+            cp -v build_output/firmware/* artifacts/ || true
           fi
 
-          # На всякий случай — прямой выход PlatformIO
-          find tasmota/.pio/build -maxdepth 3 -type f \
+          # И/или здесь (PlatformIO)
+          find .pio/build -maxdepth 3 -type f \
             \( -name "*.bin" -o -name "*.elf" -o -name "*.map" \) \
             -print -exec cp -v {} artifacts/ \; || true
 
