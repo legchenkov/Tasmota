@@ -131,153 +131,13 @@ Examples :
 #define MQTT_PORT         1883                   // [MqttPort] MQTT port (10123 on CloudMQTT)
 #endif
 
-// -- Disable Features ----------------------------
-#undef I2CDRIVERS_1
-#undef I2CDRIVERS_2
-#undef I2CDRIVERS_3
-#undef I2CDRIVERS_4
-#undef I2CDRIVERS_5
-#undef I2CDRIVERS_6
-#undef I2CDRIVERS_8
-#undef I2CDRIVERS_9
-#undef I2CDRIVERS_10
-#undef I2CDRIVERS_11
-#undef I2CDRIVERS_12
-#undef I2CDRIVERS_13
-#undef I2CDRIVERS_14
-#undef I2CDRIVERS_15
-#undef I2CDRIVERS_16
-#undef I2CDRIVERS_17
-#undef I2CDRIVERS_18
-#undef I2CDRIVERS_19
-#undef I2CDRIVERS_20
-#undef I2CDRIVERS_21
-#undef I2CDRIVERS_22
-#undef I2CDRIVERS_23
-#undef I2CDRIVERS_24
-#undef I2CDRIVERS_25
-#undef I2CDRIVERS_26
-#undef I2CDRIVERS_27
-#undef I2CDRIVERS_28
-#undef I2CDRIVERS_29
-#undef I2CDRIVERS_30
-#undef I2CDRIVERS_31
-#undef I2CDRIVERS_32
-#undef I2CDRIVERS_33
-#undef I2CDRIVERS_34
-#undef I2CDRIVERS_35
-#undef I2CDRIVERS_36
-#undef I2CDRIVERS_37
-#undef I2CDRIVERS_38
-#undef I2CDRIVERS_39
-#undef I2CDRIVERS_40
-#undef I2CDRIVERS_41
-#undef I2CDRIVERS_42
-#undef I2CDRIVERS_44
-#undef I2CDRIVERS_45
-#undef I2CDRIVERS_46
-#undef I2CDRIVERS_47
-#undef I2CDRIVERS_48
-#undef I2CDRIVERS_49
-#undef I2CDRIVERS_50
-#undef I2CDRIVERS_51
-#undef I2CDRIVERS_52
-#undef I2CDRIVERS_53
-#undef I2CDRIVERS_54
-#undef I2CDRIVERS_55
-#undef I2CDRIVERS_56
-#undef I2CDRIVERS_57
-#undef I2CDRIVERS_58
-#undef I2CDRIVERS_59
-#undef I2CDRIVERS_60
-#undef I2CDRIVERS_61
-#undef I2CDRIVERS_62
-#undef I2CDRIVERS_63
-#undef I2CDRIVERS_64
-#undef I2CDRIVERS_65
-#undef USE_DS18x20
-#undef USE_DHT
-#undef USE_SHT
-#undef USE_HTU
-#undef USE_IR_REMOTE
-#undef USE_IR_RECEIVE
-#undef USE_WS2812
-#undef USE_RF433
-#undef USE_TUYA
-#undef USE_ARILUX_RF
-#undef USE_SR04
-#undef USE_TM1638
-#undef USE_HX711
-#undef USE_PZEM004T
-#undef USE_MHZ19
-#undef USE_SENSEAIR
-#undef USE_PMS5003
-#undef USE_MPU6050
-#undef USE_MCP230xx
-#undef USE_MPR121
-#undef USE_CCS811
-#undef USE_MHZ19_SERIAL
-#undef USE_SONOFF_SC
-#undef USE_SONOFF_RF
-#undef USE_SONOFF_L1
-#undef USE_DOMOTICZ
-#undef USE_HOME_ASSISTANT
-#undef USE_EMULATION
-#undef USE_EMULATION_HUE
-#undef USE_EMULATION_WEMO
-//#undef USE_KNX
-#undef USE_ELECTRIQ
-#undef USE_TELEGRAM
-#undef USE_TIMERS_WEB
-#undef USE_SUNRISE
-#undef USE_DISCOVERY
-#undef USE_ADC
-#undef USE_SERIAL_BRIDGE
-#undef USE_MQTT_TLS
-#undef USE_MQTT_TLS_CA_CERT
-#undef USE_MQTT_TLS_FORCE_EC_CIPHER
-#undef USE_MQTT_AWS_IOT_LIGHT
-#undef USE_MQTT_OVER_WEBSOCKETS
-//#undef USE_MI_ESP32_BLE
-//#undef USE_ESP32_BLE_BEACON
-//#undef USE_ESP32_BLE_CLEARGRASS
-//#undef USE_ESP32_BLE_SENSOR
-//#undef USE_ESP32_BLE_MITHERMO
-//#undef USE_ESP32_BLE_THERMOMETER
-//#undef USE_ESP32_BLE_HIGROW
-//#undef USE_ESP32_BLE_TIMEBOX
-//#undef USE_ESP32_BLE_HID
-//#undef USE_ESP32_BLE_GAMEPAD
-#undef USE_I2S_AUDIO_OUTPUT
-#undef USE_SPI
-#undef USE_DISPLAY
-#undef USE_DISPLAY_LCD
-#undef USE_DISPLAY_OLED
-#undef USE_DISPLAY_EPD
-#undef USE_DISPLAY_MATRIX
-#undef USE_DISPLAY_ILI9341
-#undef USE_DISPLAY_EPAPER_29
-#undef USE_DISPLAY_EPAPER_42
-#undef USE_DISPLAY_ILI9488
-#undef USE_DISPLAY_RA8876
-#undef USE_DISPLAY_SEVENSEG
-#undef USE_DISPLAY_SH1106
-#undef USE_DISPLAY_SSD1351
-#undef USE_DISPLAY_SSD1351_SPI
-#undef USE_DISPLAY_ST7789
-#undef USE_DISPLAY_ST7789V
-#undef USE_DISPLAY_ST7789V2
-#undef USE_DISPLAY_SSD1331
-#undef USE_VEML6070
-
 // -- Features ------------------------------------
-#define USE_ESP32
 #define USE_I2C
-#define USE_ESP32_SENSORS
-#define USE_AHT3x
+#define USE_AHT2x
 #define USE_BMP
 
 // -- ESP32 Bluetooth -----------------------------
+#define USE_ESP32
 #define USE_BLE_ESP32
 #define BLE_ESP32_ENABLE true
 
@@ -289,7 +149,7 @@ Examples :
   
 // -- Voltage Monitoring --------------------------
 //#define USE_ADC
-
+//#define USE_ESP32_SENSORS
 #define MY_LANGUAGE            ru_RU
 
 #undef USE_KNX_WEB_MENU
