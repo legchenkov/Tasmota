@@ -1,0 +1,39 @@
+name: Scan RU translation for English strings
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan ru_RU.h
+        shell: bash
+        run: |
+          FILE="tasmota/language/ru_RU.h"
+          echo "Scanning $FILE" > report.txt
+          echo "" >> report.txt
+
+          # Вытащим строки вида: #define XXX "...."
+          # И покажем те, где в кавычках есть латиница A-Z.
+          # Далее отфильтруем типичные "технические" слова.
+          grep -nE '^\s*#define\s+[A-Z0-9_]+\s+"[^"]*"' "$FILE" \
+            | grep -E '"[^"]*[A-Za-z][^"]*"' \
+            | grep -Ev '"[^"]*(WiFi|WIFI|MQTT|HTTP|HTTPS|IP|DNS|SSID|OTA|LED|RGB|kWh|Wh|W|V|A|mA|Hz|GHz|MHz|dB|dBm|RX|TX|UART|I2C|SPI|JSON|UTF|ID|OK|ERR|CRC|SHA|TLS|SSL)[^"]*"' \
+            > suspicious.txt || true
+
+          echo "Suspicious lines (likely not translated):" >> report.txt
+          echo "----------------------------------------" >> report.txt
+          if [ -s suspicious.txt ]; then
+            cat suspicious.txt >> report.txt
+          else
+            echo "None found (or all filtered as technical terms)." >> report.txt
+          fi
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ru-translation-scan
+          path: report.txt
