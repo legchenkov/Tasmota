@@ -51,6 +51,10 @@ jobs:
         run: |
           platformio run -e "${{ inputs.env }}" -t clean
 
+      - name: List env names (debug)
+        run: |
+          grep -nE '^\[env:' platformio.ini | head -n 120
+          
       - name: Build
         run: |
           echo "Building env: ${{ inputs.env }}"
