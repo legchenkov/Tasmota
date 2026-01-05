@@ -234,7 +234,7 @@
 
 #ifdef TELE_PERIOD
 #undef TELE_PERIOD
-#define TELE_PERIOD 30
+#define TELE_PERIOD 60
 #endif
 
 #ifdef APP_SLEEP
@@ -242,6 +242,6 @@
 #define APP_SLEEP 50
 #endif
 
-#define USER_BACKLOG "Timezone 99; TimeStd 0,0,10,1,3,60; TimeDst 0,0,3,1,2,120; FriendlyName1 Kinderroom; DeviceName Kinderroom; Hostname Kinderroom; MqttHost 192.168.32.39; Topic Kinderroom; BLEAddrFilter 0; BLEMaxAge 60; so24 1; Rule1 1; Rule2 1; Rule3 1; GPIO18 640; GPIO17 608; GPIO22 256; I2CDriver12 0"
+#define USER_BACKLOG "Timezone 99; TimeStd 0,0,10,1,3,60; TimeDst 0,0,3,1,2,120; FriendlyName1 Kinderroom; DeviceName Kinderroom; Hostname Kinderroom; MqttHost 192.168.32.39; Topic Kinderroom; BLEAddrFilter 0; BLEMaxAge 60; so24 1; Rule1 1; Rule2 1; Rule3 1; GPIO18 608; GPIO17 640; GPIO22 256; I2CDriver12 0"
 
 #endif  // _USER_CONFIG_OVERRIDE_H_
