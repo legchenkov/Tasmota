@@ -212,7 +212,7 @@
 // -- Features ------------------------------------
 #define USE_BH1750
 #define USE_BMP
-#define USE_ATH2x
+#define USE_AHT2x
 
 // -- ESP32 Bluetooth -----------------------------
 #define USE_ESP32
@@ -242,6 +242,6 @@
 #define APP_SLEEP 50
 #endif
 
-#define USER_BACKLOG "Timezone 99; TimeStd 0,0,10,1,3,60; TimeDst 0,0,3,1,2,120; FriendlyName1 Bedroom; DeviceName Bedroom; Hostname Bedroom; MqttHost 192.168.32.39; Topic Bedroom; BLEAddrFilter 0; BLEMaxAge 60; so24 1; Rule1 1; Rule2 1; Rule3 1; GPIO4 640; GPIO17 608; GPIO22 256; GPIO36 4704"
+#define USER_BACKLOG "Timezone 99; TimeStd 0,0,10,1,3,60; TimeDst 0,0,3,1,2,120; FriendlyName1 Bedroom; DeviceName Bedroom; Hostname Bedroom; MqttHost 192.168.32.39; Topic Bedroom; BLEAddrFilter 0; BLEMaxAge 60; so24 1; Rule1 1; Rule2 1; Rule3 1; GPIO4 608; GPIO17 640; GPIO22 256; I2CDriver12 0"
 
 #endif  // _USER_CONFIG_OVERRIDE_H_
