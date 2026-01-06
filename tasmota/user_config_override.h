@@ -226,8 +226,8 @@
   #define USER_RULE3 "ON Rules#Timer=2 DO Backlog BLEMode1; BLEScan 9; RuleTimer1 10 endon"
 
 // -- Voltage Monitoring --------------------------
-//#define USE_ADC
-//#define USE_ESP32_SENSORS
+#define USE_ADC
+#define USE_ESP32_SENSORS
 #define MY_LANGUAGE            ru_RU
 
 #undef USE_KNX_WEB_MENU
