@@ -127,7 +127,6 @@
 #undef I2CDRIVERS_47
 #undef I2CDRIVERS_48
 #undef I2CDRIVERS_49
-#undef I2CDRIVERS_50
 #undef I2CDRIVERS_51
 #undef I2CDRIVERS_52
 #undef I2CDRIVERS_53
@@ -210,7 +209,9 @@
 #undef USE_VEML6070
 
 // -- Features ------------------------------------
-#define USE_BH1750
+#ifndef USE_VEML7700
+#define USE_VEML7700            // [I2cDriver50] Enable VEML7700 Ambient Light sensor (I2C addresses 0x10) (+4k5 code)
+#endif
 #define USE_BMP
 #define USE_AHT2x
 
@@ -226,7 +227,7 @@
   #define USER_RULE3 "ON Rules#Timer=2 DO Backlog BLEMode1; BLEScan 9; RuleTimer1 10 endon"
 
 // -- Voltage Monitoring --------------------------
-#define USE_ADC
+//#define USE_ADC
 #define USE_ESP32_SENSORS
 #define MY_LANGUAGE            ru_RU
 
@@ -242,6 +243,6 @@
 #define APP_SLEEP 50
 #endif
 
-#define USER_BACKLOG "Timezone 99; TimeStd 0,0,10,1,3,60; TimeDst 0,0,3,1,2,120; FriendlyName1 Livingroom; DeviceName Livingroom; Hostname Livingroom; MqttHost 192.168.32.39; Topic Livingroom; BLEAddrFilter 0; BLEMaxAge 60; so24 1; Rule1 1; Rule2 1; Rule3 1; GPIO4 608; GPIO17 640; GPIO22 256; GPIO36 4704; I2CDriver12 0"
+#define USER_BACKLOG "Timezone 99; TimeStd 0,0,10,1,3,60; TimeDst 0,0,3,1,2,120; FriendlyName1 Minion; DeviceName Minion; Hostname Minion; MqttHost 192.168.32.39; Topic Minion; BLEAddrFilter 0; BLEMaxAge 60; so24 1; Rule1 1; Rule2 1; Rule3 1; GPIO4 640; GPIO17 608; GPIO22 256; I2CDriver12 0"
 
 #endif  // _USER_CONFIG_OVERRIDE_H_
